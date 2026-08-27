@@ -591,7 +591,12 @@
       playerVars: { playsinline: 1, rel: 0 },
       events: {
         onReady: function(){ if(wantPlay) ytPlayer.playVideo(); },
-        onError: function(){ ytFailed = true; card.classList.remove('show'); }
+        onError: function(){ ytFailed = true; card.classList.remove('show'); },
+        onStateChange: function(e){
+          if(e.data === 0){ setPlaying(false); card.classList.remove('show'); }
+          else if(e.data === 2){ setPlaying(false); }
+          else if(e.data === 1){ setPlaying(true); }
+        }
       }
     });
   };
@@ -635,38 +640,47 @@
   }
   function arpStop(){ clearInterval(timer); timer = null; }
 
+  function setPlaying(on){
+    if(on){ btn.classList.add('playing'); btn.textContent = '♫'; }
+    else { btn.classList.remove('playing'); btn.textContent = '♪'; }
+  }
   btn.addEventListener('click', function(){
-    var playing = card.classList.contains('show');
     if(ytFailed){
-      if(timer){ arpStop(); btn.classList.remove('playing'); btn.textContent = '♪'; }
-      else { arpStart(); btn.classList.add('playing'); btn.textContent = '♫'; }
+      if(timer){ arpStop(); setPlaying(false); }
+      else { arpStart(); setPlaying(true); }
       return;
     }
-    if(!playing){
+    if(btn.classList.contains('playing')){
+      if(card.classList.contains('show')){
+        wantPlay = false;
+        setPlaying(false);
+        card.classList.remove('show');
+        if(ytPlayer) ytPlayer.pauseVideo();
+      } else {
+        card.classList.add('show');
+        if(ytPlayer) ytPlayer.playVideo();
+      }
+    } else {
       wantPlay = true;
+      setPlaying(true);
       card.classList.add('show');
-      btn.classList.add('playing'); btn.textContent = '♫';
       if(!apiTried) loadYTApi();
       if(ytReady && ytPlayer) ytPlayer.playVideo();
       if(!ytReady) setTimeout(function(){
         if(!ytReady){
-          ytFailed = true; card.classList.remove('show');
-          btn.classList.remove('playing'); btn.textContent = '♪';
-          if(wantPlay){ arpStart(); btn.classList.add('playing'); btn.textContent = '♫'; }
+          ytFailed = true;
+          card.classList.remove('show');
+          setPlaying(false);
+          if(wantPlay){ arpStart(); setPlaying(true); }
         }
       }, 4000);
-    } else {
-      stopMusic();
     }
   });
-  function stopMusic(){
-    wantPlay = false;
-    card.classList.remove('show');
-    btn.classList.remove('playing'); btn.textContent = '♪';
-    if(ytPlayer) ytPlayer.pauseVideo();
-  }
   var pcClose = document.getElementById('pcClose');
-  pcClose.addEventListener('click', stopMusic);
+  pcClose.addEventListener('click', function(){
+    /* mini mode: tutup kotak, lagu tetap muter */
+    card.classList.remove('show');
+  });
 
   /* ---------- lightbox ---------- */
   var lb = document.getElementById('lightbox');

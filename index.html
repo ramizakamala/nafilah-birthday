@@ -322,18 +322,6 @@
     box-shadow:0 12px 26px -12px rgba(217,138,156,.8);
   }
   #noteSend:hover{transform:translateY(-2px)}
-  .note-saved{display:none;margin-top:.4rem}
-  .note-saved.show{display:block;animation:fadeUp .8s ease both}
-  .note-date{font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:var(--rose);font-weight:300;margin-bottom:.6rem}
-  .note-body{
-    font-family:var(--hand);font-size:1.6rem;color:var(--ink);line-height:1.5;
-    background:rgba(255,255,255,.5);border:1px dashed rgba(217,138,156,.4);
-    border-radius:16px;padding:1.2rem 1.4rem;
-  }
-  .note-edit{
-    margin-top:.8rem;background:none;border:none;cursor:pointer;
-    font-size:.75rem;color:var(--muted);letter-spacing:.08em;text-decoration:underline;
-  }
 
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
@@ -411,15 +399,10 @@
     <div class="sec-label reveal">terakhir, dari kamu</div>
     <h2 class="sec-title reveal">tinggalin <em>pesan</em>?</h2>
     <div class="note-card reveal">
-      <p class="note-hint" id="noteHint">kalau mau, tulis sesuatu di sini — pesan ini cuma tersimpan di HP kamu, jadi rahasia kita berdua.</p>
+      <p class="note-hint" id="noteHint">kalau mau, tulis sesuatu buat aku di sini — nanti langsung ke WhatsApp aku, jadi cuma kita berdua yang tahu.</p>
       <textarea id="noteInput" rows="3" placeholder="tulis sesuatu buat aku..."></textarea>
       <br>
-      <button id="noteSend">simpan pesan ♥</button>
-      <div class="note-saved" id="noteSaved">
-        <div class="note-date" id="noteDate"></div>
-        <p class="note-body" id="noteBody"></p>
-        <button class="note-edit" id="noteEdit">ubah pesan</button>
-      </div>
+      <button id="noteSend">kirim lewat WhatsApp ♥</button>
     </div>
   </section>
 </main>
@@ -741,42 +724,16 @@
     if(!reduced) confettiBurst();
   });
 
-  /* ---------- guest note (localStorage) ---------- */
+  /* ---------- balasan via whatsapp ---------- */
   var noteInput = document.getElementById('noteInput');
   var noteSend = document.getElementById('noteSend');
-  var noteSaved = document.getElementById('noteSaved');
-  var noteDate = document.getElementById('noteDate');
-  var noteBody = document.getElementById('noteBody');
-  var noteEdit = document.getElementById('noteEdit');
-  var noteHint = document.getElementById('noteHint');
-  var saved = null;
-  try { saved = JSON.parse(localStorage.getItem('nafilahNote') || 'null'); } catch(e){}
-  function showNote(text, date){
-    noteBody.textContent = text;
-    noteDate.textContent = date;
-    noteSaved.classList.add('show');
-    noteInput.style.display = 'none';
-    noteSend.style.display = 'none';
-    noteHint.style.display = 'none';
-  }
-  if(saved && saved.text){
-    showNote(saved.text, saved.date || '');
-  }
+  var WA_NUM = '6289512826561';
   noteSend.addEventListener('click', function(){
     var t = noteInput.value.trim();
-    if(!t){ noteInput.focus(); return; }
-    var d = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-    try { localStorage.setItem('nafilahNote', JSON.stringify({ text: t, date: d })); } catch(e){}
-    saved = { text: t, date: d };
-    showNote(t, d);
-  });
-  noteEdit.addEventListener('click', function(){
-    noteSaved.classList.remove('show');
-    noteInput.style.display = '';
-    noteSend.style.display = '';
-    noteHint.style.display = '';
-    noteInput.value = saved ? saved.text : '';
-    noteInput.focus();
+    var msg = 'Hai, ini Nafilah ♥\n\n';
+    msg += t ? t : 'balasan buat website ulang tahunku ✨';
+    msg += '\n\n— dikirim dari website ulang tahunku';
+    window.open('https://wa.me/' + WA_NUM + '?text=' + encodeURIComponent(msg), '_blank');
   });
 })();
 </script>

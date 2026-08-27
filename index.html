@@ -223,6 +223,24 @@
   #musicBtn.playing{animation:spin 6s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
+  /* ---------- youtube music player ---------- */
+  #playerCard{
+    position:fixed;right:1.3rem;bottom:5.4rem;z-index:45;
+    width:min(330px,calc(100vw - 2rem));
+    background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border:1px solid var(--glass-border);border-radius:20px;padding:.9rem;
+    box-shadow:0 24px 60px -28px rgba(61,43,54,.45);
+    opacity:0;transform:translateY(14px) scale(.96);pointer-events:none;
+    transition:opacity .4s ease,transform .4s ease;
+  }
+  #playerCard.show{opacity:1;transform:none;pointer-events:auto}
+  #playerCard .now{
+    font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--muted);text-align:center;margin-bottom:.6rem;font-weight:300;
+  }
+  #ytframe{aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000}
+  #ytframe iframe{width:100%;height:100%;border:0;display:block}
+
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
     html{scroll-behavior:auto}
@@ -289,6 +307,11 @@
   <div class="line1">untuk Nafilah, di usiamu yang ke-20</div>
   <div class="line2">dibuat dengan sepenuh hati &middot; 20 tahun, dan masih jadi favoritku</div>
 </footer>
+
+<div id="playerCard">
+  <div class="now">best part &mdash; daniel caesar ft. h.e.r.</div>
+  <div id="ytframe"></div>
+</div>
 
 <button id="musicBtn" title="putar musik">♪</button>
 
@@ -435,53 +458,88 @@
     pol.querySelectorAll('.polaroid').forEach(function(el){ io.observe(el); });
   }
 
-  /* ---------- music: gentle piano arpeggio (WebAudio, no file needed) ---------- */
+  /* ---------- music: best part — daniel caesar ft. h.e.r. (youtube official audio) ---------- */
   var btn = document.getElementById('musicBtn');
+  var card = document.getElementById('playerCard');
+  var ytReady = false, ytFailed = false, ytPlayer = null, wantPlay = false, apiTried = false;
+  var YT_ID = 'vBy7FaapGRo';
+
+  window.onYouTubeIframeAPIReady = function(){
+    ytReady = true;
+    ytPlayer = new YT.Player('ytframe', {
+      videoId: YT_ID,
+      playerVars: { playsinline: 1, rel: 0 },
+      events: {
+        onReady: function(){ if(wantPlay) ytPlayer.playVideo(); },
+        onError: function(){ ytFailed = true; card.classList.remove('show'); }
+      }
+    });
+  };
+  function loadYTApi(){
+    apiTried = true;
+    var s = document.createElement('script');
+    s.src = 'https://www.youtube.com/iframe_api';
+    s.onerror = function(){ ytFailed = true; };
+    document.head.appendChild(s);
+  }
+
+  /* fallback: gentle piano arpeggio (WebAudio) */
   var audioCtx = null, master = null, timer = null, step = 0;
-  var notes = [261.63,329.63,392.00,523.25,392.00,329.63,293.66,392.00]; /* C pentatonic-ish */
-  function playStep(){
+  var notes = [261.63,329.63,392.00,523.25,392.00,329.63,293.66,392.00];
+  function arpTick(){
     var t = audioCtx.currentTime;
-    var f = notes[step % notes.length];
-    step++;
-    var osc = audioCtx.createOscillator();
-    var gain = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.value = f;
+    var f = notes[step % notes.length]; step++;
+    var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = f;
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.exponentialRampToValueAtTime(0.16, t + 0.03);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 2.6);
-    osc.connect(gain).connect(master);
-    osc.start(t);
-    osc.stop(t + 2.7);
+    osc.connect(gain).connect(master); osc.start(t); osc.stop(t + 2.7);
     if(step % 4 === 0){
-      var bass = audioCtx.createOscillator();
-      var bgain = audioCtx.createGain();
-      bass.type = 'sine';
-      bass.frequency.value = f/2;
-      bgain.gain.setValueAtTime(0.0001, t);
-      bgain.gain.exponentialRampToValueAtTime(0.07, t + 0.05);
-      bgain.gain.exponentialRampToValueAtTime(0.0001, t + 3.2);
-      bass.connect(bgain).connect(master);
-      bass.start(t); bass.stop(t + 3.3);
+      var b = audioCtx.createOscillator(), bg = audioCtx.createGain();
+      b.type = 'sine'; b.frequency.value = f/2;
+      bg.gain.setValueAtTime(0.0001, t);
+      bg.gain.exponentialRampToValueAtTime(0.07, t + 0.05);
+      bg.gain.exponentialRampToValueAtTime(0.0001, t + 3.2);
+      b.connect(bg).connect(master); b.start(t); b.stop(t + 3.3);
     }
   }
-  btn.addEventListener('click', function(){
+  function arpStart(){
     if(!audioCtx){
       audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-      master = audioCtx.createGain();
-      master.gain.value = 1;
+      master = audioCtx.createGain(); master.gain.value = 1;
       master.connect(audioCtx.destination);
     }
     if(audioCtx.state === 'suspended') audioCtx.resume();
-    if(timer){
-      clearInterval(timer); timer = null;
-      btn.classList.remove('playing');
-      btn.textContent = '♪';
+    timer = setInterval(arpTick, 640); arpTick();
+  }
+  function arpStop(){ clearInterval(timer); timer = null; }
+
+  btn.addEventListener('click', function(){
+    var playing = card.classList.contains('show');
+    if(ytFailed){
+      if(timer){ arpStop(); btn.classList.remove('playing'); btn.textContent = '♪'; }
+      else { arpStart(); btn.classList.add('playing'); btn.textContent = '♫'; }
+      return;
+    }
+    if(!playing){
+      wantPlay = true;
+      card.classList.add('show');
+      btn.classList.add('playing'); btn.textContent = '♫';
+      if(!apiTried) loadYTApi();
+      if(ytReady && ytPlayer) ytPlayer.playVideo();
+      if(!ytReady) setTimeout(function(){
+        if(!ytReady){
+          ytFailed = true; card.classList.remove('show');
+          btn.classList.remove('playing'); btn.textContent = '♪';
+          if(wantPlay){ arpStart(); btn.classList.add('playing'); btn.textContent = '♫'; }
+        }
+      }, 4000);
     } else {
-      timer = setInterval(playStep, 640);
-      playStep();
-      btn.classList.add('playing');
-      btn.textContent = '♫';
+      wantPlay = false;
+      card.classList.remove('show');
+      btn.classList.remove('playing'); btn.textContent = '♪';
+      if(ytPlayer) ytPlayer.pauseVideo();
     }
   });
 })();
